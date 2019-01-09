@@ -36,7 +36,6 @@ import android.app.job.JobScheduler
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
 import android.content.ComponentName
-import android.content.ContentValues
 import android.content.Context
 import android.os.*
 import android.util.Log

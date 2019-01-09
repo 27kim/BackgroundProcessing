@@ -27,12 +27,18 @@
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
-
         <service
             android:name=".service.LogJobService"
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service
+            android:name=".service.DownloadIntentService"
+            android:exported="false" />
+        <service
+            android:name=".service.SongService"
+            android:enabled="true"
+            android:exported="false"></service>
     </application>
 
 </manifest>
