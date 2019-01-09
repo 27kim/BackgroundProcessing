@@ -121,7 +121,7 @@ object PhotosUtils {
     }
   }
 
-  private fun fetchJsonString(): String? {
+  fun fetchJsonString(): String? {
     val string: String?
     string = getUrlAsString(Constants.PHOTOS_URL)
     try {

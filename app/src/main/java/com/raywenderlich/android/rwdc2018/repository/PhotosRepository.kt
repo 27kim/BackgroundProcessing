@@ -31,17 +31,30 @@
 
 package com.raywenderlich.android.rwdc2018.repository
 
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
+import android.content.ComponentName
+import android.content.ContentValues
+import android.content.Context
 import android.os.*
 import android.util.Log
+import androidx.work.*
+import androidx.work.Constraints.*
+import androidx.work.NetworkType.*
 import com.raywenderlich.android.rwdc2018.app.PhotosUtils
+import com.raywenderlich.android.rwdc2018.app.RWDC2018Application
+import com.raywenderlich.android.rwdc2018.service.DownloadWorker
+import com.raywenderlich.android.rwdc2018.service.LogJobService
+import com.raywenderlich.android.rwdc2018.service.PhotoJobService
+import java.util.concurrent.TimeUnit
 
 /**
  * AsysncTask
  * Runs code on background thread in doInBackground()
  * Returns a result on the main thread in onPostExecute()
- * Meant for shor-lived background tasks
+ * Meant for short-lived background tasks
  *
  * AsyncTask Thread
  * App process only has one thread for use by all AsyncTasks
@@ -52,6 +65,16 @@ import com.raywenderlich.android.rwdc2018.app.PhotosUtils
 class PhotosRepository : Repository {
     private val photosLiveData = MutableLiveData<List<String>>()
     private val bannerLiveData = MutableLiveData<String>()
+
+    companion object {
+        const val DOWNLOAD_WORK_TAG = "DOWNLOAD_WORK_TAG"
+    }
+
+    init{
+//        scheduleFetchJob()
+//        scheduleLogJob()
+        schedulePeriodicWorkRequest()
+    }
 
     override fun getPhotos(): LiveData<List<String>> {
         //fetchPhotoData()
@@ -75,6 +98,16 @@ class PhotosRepository : Repository {
                 photosLiveData.value = bundle?.getStringArrayList("PHOTOS_KEY")
             }
         }
+
+        val r = Runnable {
+            val msg = Message()
+            val bdl = Bundle()
+            bdl.putString("","")
+            msg.data = bdl
+            handler.sendMessage(msg)
+        }
+        val th = Thread(r)
+        th.start()
 
         val runnable = Runnable {
             val photoString = PhotosUtils.photoJsonString()
@@ -174,6 +207,43 @@ class PhotosRepository : Repository {
                 callback(result)
             }
         }
+    }
 
+    private fun scheduleFetchJob(){
+        val jobScheduler = RWDC2018Application.getAppContext()
+                .getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        val jobInfo = JobInfo
+                .Builder(1000, ComponentName(RWDC2018Application.getAppContext(), PhotoJobService::class.java))
+                .setPeriodic(900000)
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .build()
+        jobScheduler.schedule(jobInfo)
+    }
+
+    private fun scheduleLogJob(){
+        val jobScheduler = RWDC2018Application.getAppContext()
+                .getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        val jobInfo = JobInfo
+                .Builder(1001, ComponentName(RWDC2018Application.getAppContext(), LogJobService::class.java))
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .build()
+        jobScheduler.schedule(jobInfo)
+    }
+
+    private fun schedulePeriodicWorkRequest() {
+        val constraints = Builder()
+                .setRequiredNetworkType(CONNECTED)
+                .setRequiresStorageNotLow(true)
+                .build()
+
+        val workManager = WorkManager.getInstance()
+
+        val request: WorkRequest = PeriodicWorkRequestBuilder<DownloadWorker>(15, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .addTag(DOWNLOAD_WORK_TAG)
+                .build()
+
+        workManager.cancelAllWorkByTag(DOWNLOAD_WORK_TAG)
+        workManager.enqueue(request)
     }
 }
